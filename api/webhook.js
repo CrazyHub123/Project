@@ -3,6 +3,7 @@ import { Buffer } from 'buffer';
 export default async function handler(req, res) {
   const SECRET_KEY = process.env.SECRET_KEY;
 
+  // Define routing based on 'tag' value
   const TAG_ROUTING = {
     event1: process.env.AURA_WEBHOOK_URL,
     event2: process.env.ROYAL_WEBHOOK_URL,
@@ -18,27 +19,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Decode base64 payload
-    const decodedJson = Buffer.from(req.body.data, "base64").toString("utf8");
-    const { tag, ...payload } = JSON.parse(decodedJson);
+    // Decode the Base64-encoded message
+    const decodedPayload = Buffer.from(req.body.data, 'base64').toString('utf8');
+    
+    // Parse the decoded payload as JSON
+    const parsedPayload = JSON.parse(decodedPayload);
+    
+    // Extract tag from parsed payload
+    const { tag, ...rest } = parsedPayload;
 
-    // Check if the tag is valid and send to the correct webhook
+    // Get the correct webhook URL based on tag
     const webhookUrl = TAG_ROUTING[tag];
     if (!webhookUrl) {
       return res.status(400).send("Invalid tag");
     }
 
-    // Send the decoded message to the relevant webhook URL
+    // Forward the message to the correct webhook URL
     const response = await fetch(webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(rest),
     });
 
     const result = await response.text();
-    res.status(200).send(`Message sent to ${tag}`);
-  } catch (err) {
-    console.error(err);
+    res.status(200).send(`Message sent to ${tag}: ${result}`);
+  } catch (error) {
+    console.error(error);
     res.status(500).send("Failed to send message");
   }
 }
