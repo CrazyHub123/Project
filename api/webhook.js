@@ -1,28 +1,27 @@
-export default async function handler(req, res) {
-  const SECRET_KEY = process.env.SECRET_KEY;
-  const DISCORD_WEBHOOK_URL = process.env.WEBHOOK_URL;
+const webhookMap = {
+  royal: process.env.ROYAL_WEBHOOK,
+  aura: process.env.AURA_WEBHOOK,
+  eggs: process.env.EGG_WEBHOOK
+};
 
-  if (req.method !== "POST") {
-    return res.status(405).send("Only POST allowed");
-  }
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).send("Only POST allowed");
 
   const authKey = req.headers["x-auth-key"];
-  if (authKey !== SECRET_KEY) {
-    return res.status(403).send("Forbidden: Invalid key");
-  }
+  if (authKey !== process.env.SECRET_KEY) return res.status(403).send("Forbidden");
 
-  try {
-    const response = await fetch(DISCORD_WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(req.body),
-    });
+  const body = await req.json();
 
-    const result = await response.text();
-    res.status(200).send(result);
-  } catch (error) {
-    res.status(500).send("Failed to send webhook");
-  }
+  const webhookId = body.webhookId;
+  if (!webhookMap[webhookId]) return res.status(400).send("Invalid webhookId");
+
+  const { webhookId: _, ...cleanBody } = body; // Remove the routing key from payload
+
+  await fetch(webhookMap[webhookId], {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cleanBody)
+  });
+
+  res.status(200).send("Sent!");
 }
