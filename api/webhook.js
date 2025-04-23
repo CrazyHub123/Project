@@ -5,8 +5,10 @@ export default async function handler(req, res) {
 
   // Define routing based on 'tag' value
   const TAG_ROUTING = {
-    event1: process.env.AURA_WEBHOOK_URL,
-    event2: process.env.EGG_WEBHOOK_URL,
+    aura: process.env.AURA_WEBHOOK_URL,
+    royal: process.env.ROYAL_WEBHOOK_URL,
+    egg: process.env.EGG_WEBHOOK_URL,
+
   };
 
   if (req.method !== "POST") {
@@ -19,9 +21,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Decode the Base64-encoded message and URL
+    // Decode the Base64-encoded message
     const decodedPayload = Buffer.from(req.body.data, 'base64').toString('utf8');
-    const decodedUrl = Buffer.from(req.body.url, 'base64').toString('utf8');
     
     // Parse the decoded payload as JSON
     const parsedPayload = JSON.parse(decodedPayload);
@@ -29,10 +30,10 @@ export default async function handler(req, res) {
     // Extract tag from parsed payload
     const { tag, ...rest } = parsedPayload;
 
-    // Get the correct webhook URL based on tag, fallback to decoded URL if needed
-    const webhookUrl = TAG_ROUTING[tag] || decodedUrl;
+    // Get the correct webhook URL based on tag
+    const webhookUrl = TAG_ROUTING[tag];
     if (!webhookUrl) {
-      return res.status(400).send("Invalid tag or URL");
+      return res.status(400).send("Invalid tag");
     }
 
     // Forward the message to the correct webhook URL
